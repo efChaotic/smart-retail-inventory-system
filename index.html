@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Smart Retail — Live Control Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E11;
+    --panel:#12161B;
+    --panel-edge:#1C2128;
+    --text:#EDEFF2;
+    --muted:#7C8896;
+    --amber:#E8A33D;
+    --cyan:#3DCCC7;
+    --danger:#E0573F;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:32px;
+  }
+  .wrap{max-width:1280px; margin:0 auto;}
+
+  /* Header */
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:1px solid var(--panel-edge);
+    padding-bottom:20px; margin-bottom:8px;
+  }
+  .title-block h1{
+    font-size:28px; font-weight:700; letter-spacing:-0.02em;
+  }
+  .title-block .sub{
+    color:var(--muted); font-size:13px; margin-top:4px;
+    font-family:'JetBrains Mono', monospace; letter-spacing:0.02em;
+  }
+  .status{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--cyan);
+  }
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--cyan); animation:blink 1.6s infinite;}
+  @keyframes blink{0%,100%{opacity:1;} 50%{opacity:0.25;}}
+
+  /* Pulse strip — signature element */
+  .pulse-strip{
+    height:48px; display:flex; align-items:center; gap:3px;
+    overflow:hidden; margin:20px 0 32px 0; padding:0 2px;
+    border-top:1px solid var(--panel-edge);
+    border-bottom:1px solid var(--panel-edge);
+  }
+  .tick{
+    width:3px; flex-shrink:0; border-radius:1px;
+    background:var(--cyan); opacity:0.85;
+    animation:rise 0.4s ease-out;
+  }
+  .tick.alert{background:var(--amber);}
+  @keyframes rise{from{transform:scaleY(0); opacity:0;} to{transform:scaleY(1); opacity:0.85;}}
+
+  /* Grid */
+  .grid{
+    display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:20px;
+  }
+  @media (max-width:980px){.grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:10px;
+    padding:20px;
+  }
+  .panel h2{
+    font-size:13px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--muted); font-weight:600; margin-bottom:14px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel h2 .tag{
+    font-family:'JetBrains Mono', monospace; font-size:11px;
+    color:var(--text); background:var(--panel-edge);
+    padding:2px 8px; border-radius:4px;
+  }
+
+  /* Inventory rows */
+  .inv-row{
+    display:grid; grid-template-columns:1fr 70px 90px;
+    align-items:center; gap:10px; padding:10px 0;
+    border-bottom:1px solid var(--panel-edge);
+  }
+  .inv-row:last-child{border-bottom:none;}
+  .inv-name{font-size:14px; font-weight:500;}
+  .inv-val{
+    font-family:'JetBrains Mono', monospace; font-size:14px; text-align:right;
+  }
+  .bar-track{height:6px; background:var(--panel-edge); border-radius:3px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:3px; background:var(--cyan); transition:width .5s ease;}
+  .bar-fill.low{background:var(--amber);}
+  .bar-fill.critical{background:var(--danger);}
+
+  /* List rows (transactions, mongo, alerts) */
+  .list-row{
+    padding:9px 0; border-bottom:1px solid var(--panel-edge);
+    font-size:13px; display:flex; justify-content:space-between; gap:10px;
+  }
+  .list-row:last-child{border-bottom:none;}
+  .list-row .label{color:var(--text);}
+  .list-row .meta{color:var(--muted); font-family:'JetBrains Mono', monospace; font-size:11px; white-space:nowrap;}
+  .pill{
+    font-family:'JetBrains Mono', monospace; font-size:10px; padding:2px 7px;
+    border-radius:4px; text-transform:uppercase; letter-spacing:0.04em;
+  }
+  .pill.sale{background:rgba(61,204,199,0.15); color:var(--cyan);}
+  .pill.restock{background:rgba(232,163,61,0.15); color:var(--amber);}
+
+  .alert-row{
+    background:rgba(224,87,63,0.08);
+    border-left:2px solid var(--danger);
+    padding:10px 12px; border-radius:6px; margin-bottom:8px;
+    font-size:13px;
+  }
+  .alert-row .name{font-weight:600; color:var(--danger);}
+  .alert-row .msg{color:var(--muted); margin-top:2px; font-size:12px;}
+
+  .graph-row{
+    display:flex; align-items:center; gap:10px; padding:10px 0;
+    border-bottom:1px solid var(--panel-edge); font-size:13px;
+  }
+  .graph-row:last-child{border-bottom:none;}
+  .node{
+    font-family:'JetBrains Mono', monospace; font-size:11px;
+    padding:4px 9px; border-radius:5px; background:var(--panel-edge);
+  }
+  .node.product{color:var(--text);}
+  .node.supplier{color:var(--amber); border:1px solid rgba(232,163,61,0.3);}
+  .arrow{color:var(--muted);}
+
+  .empty{color:var(--muted); font-size:13px; padding:20px 0; text-align:center;}
+
+  footer{
+    margin-top:28px; text-align:center; color:var(--muted);
+    font-family:'JetBrains Mono', monospace; font-size:11px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <h1>Smart Retail — Live Control Room</h1>
+      <div class="sub">MySQL · MongoDB · Neo4j — polyglot telemetry pipeline</div>
+    </div>
+    <div class="status"><span class="dot"></span> <span id="status-text">connecting…</span></div>
+  </header>
+
+  <div class="pulse-strip" id="pulse-strip"></div>
+
+  <div class="grid">
+
+    <!-- Inventory -->
+    <div class="panel">
+      <h2>Shelf Inventory <span class="tag">MySQL</span></h2>
+      <div id="inventory-list"><div class="empty">Waiting for data…</div></div>
+    </div>
+
+    <!-- Sensor readings -->
+    <div class="panel">
+      <h2>Raw Sensor Feed <span class="tag">MongoDB</span></h2>
+      <div id="sensor-list"><div class="empty">Waiting for data…</div></div>
+    </div>
+
+    <!-- Low stock graph -->
+    <div class="panel">
+      <h2>Supplier Links <span class="tag">Neo4j</span></h2>
+      <div id="graph-list"><div class="empty">No active alerts</div></div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="panel">
+      <h2>Transaction Log <span class="tag">MySQL</span></h2>
+      <div id="tx-list"><div class="empty">Waiting for data…</div></div>
+    </div>
+
+    <!-- Foot traffic -->
+    <div class="panel">
+      <h2>Foot Traffic <span class="tag">MongoDB</span></h2>
+      <div id="traffic-list"><div class="empty">Waiting for data…</div></div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="panel">
+      <h2>Low Stock Alerts <span class="tag">MySQL</span></h2>
+      <div id="alerts-list"><div class="empty">No alerts yet</div></div>
+    </div>
+
+  </div>
+
+  <footer>refreshing every 3s — backend: localhost:5000</footer>
+</div>
+
+<script>
+const API = "http://localhost:5000/api";
+
+function timeAgo(ts){
+  const d = new Date(ts);
+  const diff = Math.max(0, (Date.now() - d.getTime())/1000);
+  if(diff < 60) return Math.floor(diff)+"s ago";
+  return Math.floor(diff/60)+"m ago";
+}
+
+function addPulse(isAlert){
+  const strip = document.getElementById('pulse-strip');
+  const tick = document.createElement('div');
+  tick.className = 'tick' + (isAlert ? ' alert' : '');
+  tick.style.height = (10 + Math.random()*28) + 'px';
+  strip.appendChild(tick);
+  if(strip.children.length > 140) strip.removeChild(strip.firstChild);
+}
+
+async function fetchJSON(path){
+  try{
+    const res = await fetch(API + path);
+    if(!res.ok) throw new Error();
+    return await res.json();
+  }catch(e){ return null; }
+}
+
+async function updateInventory(){
+  const data = await fetchJSON("/inventory");
+  const el = document.getElementById("inventory-list");
+  if(!data){ el.innerHTML = '<div class="empty">Backend offline</div>'; return; }
+  el.innerHTML = data.map(item => {
+    const stock = parseFloat(item.current_stock);
+    const maxCap = parseFloat(item.max_capacity);
+    const minThresh = parseFloat(item.min_threshold);
+    const pct = Math.min(100, (stock / maxCap) * 100);
+    const state = stock < minThresh ? 'critical'
+      : stock < minThresh * 2 ? 'low' : '';
+    return `
+      <div class="inv-row">
+        <div class="inv-name">${item.name}</div>
+        <div class="inv-val">${stock.toFixed(2)} kg</div>
+        <div class="bar-track"><div class="bar-fill ${state}" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join("");
+}
+
+async function updateTransactions(){
+  const data = await fetchJSON("/transactions");
+  const el = document.getElementById("tx-list");
+  if(!data){ el.innerHTML = '<div class="empty">Backend offline</div>'; return; }
+  el.innerHTML = data.map(t => `
+    <div class="list-row">
+      <span class="label">${t.name} <span class="pill ${t.type}">${t.type}</span></span>
+      <span class="meta">${parseFloat(t.quantity).toFixed(2)} · ${timeAgo(t.timestamp)}</span>
+    </div>`).join("");
+}
+
+async function updateAlerts(){
+  const data = await fetchJSON("/alerts");
+  const el = document.getElementById("alerts-list");
+  if(!data){ el.innerHTML = '<div class="empty">Backend offline</div>'; return; }
+  if(data.length === 0){ el.innerHTML = '<div class="empty">No alerts yet</div>'; return; }
+  el.innerHTML = data.map(a => `
+    <div class="alert-row">
+      <div class="name">${a.name}</div>
+      <div class="msg">${a.message} — ${timeAgo(a.timestamp)}</div>
+    </div>`).join("");
+}
+
+async function updateSensors(){
+  const data = await fetchJSON("/sensor-readings");
+  const el = document.getElementById("sensor-list");
+  if(!data){ el.innerHTML = '<div class="empty">Backend offline</div>'; return; }
+  el.innerHTML = data.map(s => `
+    <div class="list-row">
+      <span class="label">${s.product_name || s.sensor_id}</span>
+      <span class="meta">${s.value} ${s.unit} · ${timeAgo(s.timestamp)}</span>
+    </div>`).join("");
+}
+
+async function updateTraffic(){
+  const data = await fetchJSON("/foot-traffic");
+  const el = document.getElementById("traffic-list");
+  if(!data){ el.innerHTML = '<div class="empty">Backend offline</div>'; return; }
+  el.innerHTML = data.map(t => `
+    <div class="list-row">
+      <span class="label">${t.sensor_id}</span>
+      <span class="meta">${t.count} entries · ${timeAgo(t.timestamp)}</span>
+    </div>`).join("");
+}
+
+async function updateGraph(){
+  const data = await fetchJSON("/low-stock-graph");
+  const el = document.getElementById("graph-list");
+  if(!data){ el.innerHTML = '<div class="empty">Backend offline</div>'; return; }
+  if(data.length === 0){ el.innerHTML = '<div class="empty">No active alerts</div>'; return; }
+  el.innerHTML = data.map(g => `
+    <div class="graph-row">
+      <span class="node product">${g.product}</span>
+      <span class="arrow">→ LOW_STOCK →</span>
+      <span class="node supplier">${g.supplier}</span>
+    </div>`).join("");
+}
+
+async function refreshAll(){
+  const [inv] = await Promise.all([fetchJSON("/inventory")]);
+  let hadAlert = false;
+  if(inv){
+    hadAlert = inv.some(i => i.current_stock < i.min_threshold);
+    document.getElementById("status-text").textContent = "live";
+  } else {
+    document.getElementById("status-text").textContent = "backend offline";
+  }
+  addPulse(hadAlert);
+
+  updateInventory();
+  updateTransactions();
+  updateAlerts();
+  updateSensors();
+  updateTraffic();
+  updateGraph();
+}
+
+refreshAll();
+setInterval(refreshAll, 3000);
+</script>
+</body>
+</html>
